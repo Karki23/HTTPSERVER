@@ -2,30 +2,23 @@
 The basic workflow of a http server is
 >> Initially HTTP Client(i.e., web browser) sends a HTTP request to the HTTP Server.
 >> Server processes the request received and sends HTTP response to the HTTP client.
-
 Here the browser is the client and the stuff rendered on the browser given as address like
 http://www.example.com:80/
 is the server's index.html
-
 When a request is given by a browser it has few http methods
 GET
 The GET method requests a representation of the specified resource. Requests using GET should only retrieve data and should have no other effect.
-
 HEAD
 The HEAD method asks for a response identical to that of a GET request, but without the response body.
-
 POST
 The POST method requests that the server accept the entity enclosed in the request as a new subordinate of the web resource identified by the URI.
 The data POSTed might be, for example, an annotation for existing resources; a message for a bulletin board, newsgroup, mailing list, or comment thread;
 a block of data that is the result of submitting a web form to a data-handling process; or an item to add to a database.[23]
-
 PUT
 The PUT method requests that the enclosed entity be stored under the supplied URI. If the URI refers to an already existing resource, it is modified;
 if the URI does not point to an existing resource, then the server can create the resource with that URI.[24]
-
 DELETE
 The DELETE method deletes the specified resource.
-
 A Basic structure of request (http)
 GET /hello.html HTTP/1.1
 User-Agent: Mozilla/4.0 (compatible; MSIE5.01; Windows NT)
@@ -33,7 +26,6 @@ Host: www.tutorialspoint.com
 Accept-Language: en-us
 Accept-Encoding: gzip, deflate
 Connection: Keep-Alive
-
 A basic structure of response (http)
 HTTP/1.1 200 OK
 Date: Mon, 27 Jul 2009 12:28:53 GMT
@@ -42,20 +34,15 @@ Last-Modified: Wed, 22 Jul 2009 19:15:56 GMT
 Content-Length: 88
 Content-Type: text/html
 Connection: Closed
-
 <html>
 <body>
 <h1>Hello, World!</h1>
 </body>
 </html>
-
 For a response to be given and something meaningful to be rendered in the browser 3 headers are cumpolsory
-
 HTTP/1.1 200 OK → This mentions what version of HTTP we are using, Status code and Status message.
 Content-Type: text/plain → This says that I’m (server) sending a plain text. There are many Content-Types. For example, for images we use this.
 Content-Length: 12 → It mentions how many bytes the server is sending to the client. The web-browser only reads how much we mention here.
-
-
 THE FOLLOWING CODE IS AN EXTENSION OF THE TCP_SERVER.C
 HERE WE LAEERN HOW TO SERVE WEB PAGES AND IMAGES ETC FROM A SERVER.
 There are 3 main cases to consider:
@@ -68,14 +55,11 @@ The list of status codes is as follows:
 3xx Redirection
 4xx Client errors
 5xx Server errors
-
 The content-types are
 The two composite top-level media types are:
-
 Multipart
 Message
 The five discrete top-level media types are:
-
 Text
 Image
 Audio
@@ -167,6 +151,7 @@ int main(int argc, char const *argv[])
             exit(EXIT_FAILURE);
         }
         valread = read( new_socket ,buffer,30000);
+        //printf("%s\n",buffer);
         printf("HTTP request recieved from client\n");
         request = parserequest(buffer);
         response = formresponse(request);
@@ -198,8 +183,11 @@ HTTPREQ* parserequest(const char* raw_req){
     i+=1;
     j+=1;
   }
-  if(j<2){ //if it is directed at the root URL ie localhost:8080/ it redirects to index.html by default, basically checks if the file component is "" or not
+  if(j<2 && strcmp(parsed->METHOD,"POST")){ //if it is directed at the root URL ie localhost:8080/ it redirects to index.html by default, basically checks if the file component is "" or not
     strcpy(parsed->file,"index.html");
+  }
+  else if(!(strcmp(parsed->METHOD,"POST"))){
+    strcpy(parsed->file,"data.txt");
   }
   else{ //otherwise redirect to the given path
     strcpy(parsed->file,temp);
@@ -207,14 +195,15 @@ HTTPREQ* parserequest(const char* raw_req){
   strcpy(temp,"");
   j = 0;
   if(!(strcmp(parsed->METHOD,"POST"))){ //
-    while(raw_req[i]!='\n' || raw_req[i+1]!='\n'){  //get to the content body
+    printf("LOLOLO\n\n\n");
+    while(raw_req[i]!='\n' || raw_req[i+2]!='\n'){  //get to the content body
       i +=1;
-      if(raw_req[i]=='\0'){ //if end is reached before that then return parsed
+      if(i>=strlen(raw_req)){ //if end is reached before that then return parsed
         strcpy(parsed->content,"");
         return parsed;
       }
     }
-    i+=2;
+    i+=3;
     while(raw_req[i]!='\0'){ //extract content body
       temp[j] = raw_req[i];
       j+=1;
@@ -255,13 +244,17 @@ HTTPRES* formresponse(HTTPREQ* parsed){
       }
     }
   else if(!(strcmp(parsed->METHOD,"POST"))){
-      time_t now;
       FILE *fp = NULL;
+      time_t rawtime;
+      struct tm * timeinfo;
+      time ( &rawtime );
+      timeinfo = localtime ( &rawtime );
       if(!(fp = fopen(parsed->file,"a"))){
         fp = fopen(parsed->file,"w");
       }
-      fprintf(fp,"%s\n", ctime(&now));
-      fprintf(fp,"%s\n\n",parsed->content);
+      fprintf(fp, "%s\n", asctime(timeinfo));
+      fprintf(fp, "%s\n", "A post request has been made at the above mentioned time!");
+      //fprintf(fp,"%s\n\n",parsed->content);
       fclose(fp);
       strcpy(response->status,"HTTP 1.1/ 200 OK");
       strcpy(response->conttype,"Content-Type: text/plain");
