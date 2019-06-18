@@ -83,8 +83,6 @@ Video
 Application
 */
 
-
-
 #include <stdio.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -94,6 +92,7 @@ Application
 #include <time.h>
 #include <string.h>
 #define PORT 8080
+
 typedef struct HTTPREQ HTTPREQ;
 typedef struct HTTPRES HTTPRES;
 
@@ -167,10 +166,8 @@ int main(int argc, char const *argv[])
             perror("Could not recieve client message");
             exit(EXIT_FAILURE);
         }
-        //strcpy(buffer,"");
         valread = read( new_socket ,buffer,30000);
         printf("HTTP request recieved from client\n");
-        printf("%s\n\n",buffer);
         request = parserequest(buffer);
         response = formresponse(request);
         strcpy(final_response,getcontent(response));
@@ -201,24 +198,24 @@ HTTPREQ* parserequest(const char* raw_req){
     i+=1;
     j+=1;
   }
-  if(j<2){
+  if(j<2){ //if it is directed at the root URL ie localhost:8080/ it redirects to index.html by default, basically checks if the file component is "" or not
     strcpy(parsed->file,"index.html");
   }
-  else{
+  else{ //otherwise redirect to the given path
     strcpy(parsed->file,temp);
   }
   strcpy(temp,"");
   j = 0;
-  if(!(strcmp(parsed->METHOD,"POST"))){
-    while(raw_req[i]!='\n' || raw_req[i+1]!='\n'){  //THIS PART
+  if(!(strcmp(parsed->METHOD,"POST"))){ //
+    while(raw_req[i]!='\n' || raw_req[i+1]!='\n'){  //get to the content body
       i +=1;
-      if(raw_req[i]=='\0'){
+      if(raw_req[i]=='\0'){ //if end is reached before that then return parsed
         strcpy(parsed->content,"");
         return parsed;
       }
     }
     i+=2;
-    while(raw_req[i]!='\0'){
+    while(raw_req[i]!='\0'){ //extract content body
       temp[j] = raw_req[i];
       j+=1;
       i+=1;
@@ -286,7 +283,7 @@ int isFilePresent(char *fn){
       filename[i]=c;
       i+=1;
   }
-
+  pclose(fp);
   char cleanerfilename[1000]; //list of all files and directories after strpping out the spaces
   for(i =0,d= 0;i<strlen(filename);i++){
       if (!((filename[i] == ' ' && filename[i+1] == ' ') || filename[i]=='\t')) {
@@ -308,6 +305,7 @@ char* getcontent(HTTPRES* response){
   strcat(temp,response->content);
   return temp;
 }
+
 char* getResponseBody(char* filename){
   FILE* filePointer = fopen(filename,"r");
   if(!filePointer)
@@ -326,32 +324,26 @@ char* getResponseBody(char* filename){
     return buffer;
 }
 
-int search(char* pat, char* txt)
-{
-    int M = strlen(pat);
-    int N = strlen(txt);
-
-    /* A loop to slide pat[] one by one */
-    for (int i = 0; i <= N - M; i++) {
-        int j;
-        /* For current index i, check for pattern match */
-        for (j = 0; j < M; j++)
-            if (txt[i + j] != pat[j])
-                break;
-        if (j == M) // if pat[0...M-1] = txt[i, i+1, ...i+M-1]
-            return 1;
-    }
-    return 0;
+int search(char* pat, char* txt){
+  int M = strlen(pat);
+  int N = strlen(txt);
+  for (int i = 0; i <= N - M; i++){
+      int j;
+      for (j = 0; j < M; j++)
+          if (txt[i + j] != pat[j])
+              break;
+      if (j == M)
+          return 1;
+  }
+  return 0;
 }
 
 int strend(const char *s, const char *t) //function to check if a string ends with a something, used to check file extensions
 {
-    size_t ls = strlen(s); // find length of s
-    size_t lt = strlen(t); // find length of t
-    if (ls >= lt)  // check if t can fit in s
-    {
-        // point s to where t should start and compare the strings from there
-        return (0 == memcmp(t, s + (ls - lt), lt));
-    }
-    return 0; // t was longer than s
+  size_t ls = strlen(s);
+  size_t lt = strlen(t);
+  if (ls >= lt){
+      return (0 == memcmp(t, s + (ls - lt), lt));
+  }
+  return 0;
 }
